@@ -12,15 +12,16 @@ class Order extends Model
     use HasUuids;
 
     protected $fillable = [
-        'name',
+        'redProviderPortalId',
         'type',
-        'status'
+        'status',
+        'name',
     ];
 
     protected $casts = [
         'type' => OrderType::class,
         'status' => OrderStatus::class,
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime'
+        'created_at' => 'datetime:d.m.Y H:i:s',
+        'updated_at' => 'datetime:d.m.Y H:i:s',
     ];
 }

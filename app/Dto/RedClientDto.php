@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto;
 
-readonly class OrderDto
+readonly class RedClientDto
 {
     public function __construct(
         public string $id,
@@ -17,7 +17,7 @@ readonly class OrderDto
         return new self(
             id: $data['id'],
             type: $data['type'],
-            status: $data['status']
+            status: $data['status'],
         );
     }
 

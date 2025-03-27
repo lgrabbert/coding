@@ -4,55 +4,41 @@ declare(strict_types=1);
 
 namespace App\Repositories;
 
+use App\Dto\RedClientDto;
 use App\Enums\OrderStatus;
-use App\Enums\OrderType;
 use App\Models\Order;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Pagination\LengthAwarePaginator;
 
 class OrderRepository
 {
-    public function findById(string $id): ?Order
+    public function findOrderById(string $redProviderPortalId): Order|null
     {
-        return Order::find($id);
+        return Order::where('redProviderPortalId', $redProviderPortalId)->first();
     }
 
-    public function getFiltered(?string $name = null, string $sortBy = 'created_at', string $direction = 'desc'): LengthAwarePaginator
+    public function getAllOrders(?string $sortNameDirection, ?string $sortDateDirection): Collection
     {
-        $query = Order::query();
-
-        if ($name) {
-            $query->where('name', 'LIKE', "%{$name}%");
-        }
-
-        $allowedSortColumns = ['name', 'created_at'];
-        $sortBy = in_array($sortBy, $allowedSortColumns) ? $sortBy : 'created_at';
-        $direction = in_array($direction, ['asc', 'desc']) ? $direction : 'desc';
-
-        return $query->orderBy($sortBy, $direction)->paginate(15);
+        return Order::query()
+            ->when($sortNameDirection, fn($query) => $query->orderBy('name', $sortNameDirection))
+            ->when($sortDateDirection, fn($query) => $query->orderBy('created_at', $sortDateDirection))
+            ->get();
     }
 
-    public function create(string $name, OrderType $type): Order
+    public function create(RedClientDto $orderDto, string $name): Order
     {
         return Order::create([
             'name' => $name,
-            'type' => $type,
-            'status' => OrderStatus::ORDERED
+            'redProviderPortalId' => $orderDto->id,
+            'type' => $orderDto->type,
+            'status' => $orderDto->status
         ]);
     }
 
-    public function updateStatus(Order $order, OrderStatus $status): bool
+    public function deleteOrderById(string $redProviderPortalId): int
     {
-        return $order->update(['status' => $status]);
-    }
-
-    public function delete(Order $order): bool
-    {
-        if (!$order->status->canBeDeleted()) {
-            return false;
-        }
-
-        return $order->delete();
+        return Order::where('redProviderPortalId', $redProviderPortalId)
+            ->where('status', '!=', 'completed')
+            ->delete();
     }
 
     public function getByStatus(OrderStatus $status): Collection

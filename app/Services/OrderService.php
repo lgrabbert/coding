@@ -4,58 +4,53 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use Symfony\Component\HttpKernel\Exception\HttpException;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
-use RuntimeException;
-use Throwable;
+use App\Dto\RedClientDto;
+use App\Enums\OrderType;
+use App\Http\Clients\RedClient;
+use App\Models\Order;
+use App\Repositories\OrderRepository;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\Client\Response;
 
 class OrderService
 {
-    public function getOrderById(string $id)
+
+    public function __construct(
+        public OrderRepository $orderRepository,
+        public RedClient       $redClient,
+    )
     {
-        try {
-            $response = Http::redProvider()->get('/api/v1/orders/' . $id);
-
-            if (!$response->successful()) {
-                throw new HttpException(400, 'Bad Request from RedProvider.');
-            }
-
-        } catch (Throwable $e) {
-            Log::warning('RedProvider not reachable', [
-                'error' => $e->getMessage(),
-                'endpoint' => '/api/v1/orders/' . $id,
-                'orderId' => $id
-            ]);
-
-            throw new RuntimeException('Failed to fetch order from RedProvider.');
-        }
-
-        return $response;
-
-
     }
 
-
-    public function getOrderList()
+    public function getOrders(?string $sortNameDirection, ?string $sortDateDirection): Collection
     {
-        try {
-            $response = Http::redProvider()->get('/api/v1/orders');
+        return $this->orderRepository->getAllOrders($sortNameDirection, $sortDateDirection);
+    }
 
-            if (!$response->successful()) {
-                //add custom codes
-                throw new HttpException(400, 'Bad Request from RedProvider.');
-            }
-        } catch (Throwable $e) {
-            Log::warning('RedProvider not reachable', [
-                'error' => $e->getMessage(),
-                'endpoint' => '/api/v1/orders',
-            ]);
+    public function createRedClientOrder(OrderType $type): Response
+    {
+        //first call client to save data
+        return $this->redClient->createOrder($type);
+    }
 
-            throw new RuntimeException('Failed to fetch orders from RedProvider.');
-        }
+    public function saveOrderToDatabase(RedClientDto $order, string $name): Order
+    {
+        return $this->orderRepository->create($order, $name);
+    }
 
+    public function findOrderById(string $redProviderPortalId): ?Order
 
-        return $response;
+    {
+        return $this->orderRepository->findOrderById($redProviderPortalId);
+    }
+
+    public function deleteOrderByIdFromDatabase(string $redProviderPortalId): int
+    {
+        return $this->orderRepository->deleteOrderById($redProviderPortalId);
+    }
+
+    public function deleteOrderByIdFromRedClient(string $redProviderPortalId): void
+    {
+        $this->redClient->deleteOrderById($redProviderPortalId);
     }
 }

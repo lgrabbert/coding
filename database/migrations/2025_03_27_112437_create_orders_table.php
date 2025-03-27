@@ -10,12 +10,11 @@ return new class extends Migration
     {
         Schema::create('orders', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->string('redProviderPortalId');
             $table->string('name');
             $table->enum('type', ['connector', 'vpn_connection']);
             $table->enum('status', ['ordered', 'processing', 'completed'])->default('ordered');
             $table->timestamps();
-
-            $table->index('name');
             $table->index('created_at');
             $table->index('status');
         });

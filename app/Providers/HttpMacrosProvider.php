@@ -8,6 +8,7 @@ use GuzzleHttp\RequestOptions;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\ServiceProvider;
+use RuntimeException;
 
 
 class HttpMacrosProvider extends ServiceProvider
@@ -20,6 +21,14 @@ class HttpMacrosProvider extends ServiceProvider
     public function boot(): void
     {
         Http::macro('redProvider', function () {
+            if (env('RED_PROVIDER_USE_MOCK', false)) {
+                return Http::fake([
+                    '*' => Http::response([
+                        'status' => 'completed'
+                    ], 200)
+                ]);
+            }
+
             $baseUrl = env('RED_PROVIDER_URL');
             $clientId = env('RED_PROVIDER_CLIENT_ID');
             $clientSecret = env('RED_PROVIDER_CLIENT_SECRET');
@@ -28,13 +37,13 @@ class HttpMacrosProvider extends ServiceProvider
             if (!Cache::has('redprovider.token')) {
                 $response = Http::withOptions([
                     RequestOptions::VERIFY => $certPath,
-                ])->post("$baseUrl/api/v1/token", [
+                ])->post($baseUrl . "token", [
                     'client_id' => $clientId,
                     'client_secret' => $clientSecret,
                 ]);
 
                 if (!$response->successful()) {
-                    throw new \RuntimeException('Failed to retrieve RedProvider token: ' . $response->body());
+                    throw new RuntimeException('Failed to retrieve RedProvider token: ' . $response->body());
                 }
 
                 $json = $response->json();
